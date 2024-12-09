@@ -8,13 +8,22 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,7 +50,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.coffeproduction.ui.theme.CoffeProductionTheme
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import com.example.coffeproduction.model.Coffe
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +71,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            var text by remember { mutableStateOf("") }
+            var coffe1 = Coffe(1, "Café Latte", "Café equilibrado com leite vaporizado e leve camada de espuma", 5, 1, 1, 5, 9.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
+            var coffe2 = Coffe(2, "Café Teste", "Café equilibrado com leite vaporizado e leve camada de espuma", 5, 1, 1, 5, 9.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
+            val originalCoffeList =  remember { mutableStateListOf(coffe1, coffe2) }
+            var coffeList by remember { mutableStateOf(originalCoffeList.toList()) }
             CoffeProductionTheme {
                 Scaffold(
                     topBar = {
@@ -65,10 +92,11 @@ class MainActivity : ComponentActivity() {
                     floatingActionButton = {
                         FloatingActionButton(
                             onClick = {},
-                            containerColor = Color(0xFF006241)
+                            containerColor = Color(0xFF006241),
+                            contentColor = Color.White
                             ) { Icon(
                                  Icons.Filled.Add,
-                                contentDescription = "Adicionar"
+                                 contentDescription = "Adicionar"
                         ) }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -80,8 +108,14 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize().padding(innerPadding),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            SearchInput()
-                            CoffeBox()
+                            SearchInput(
+                                value = text,
+                                onValueChange = {text = it; coffeList = originalCoffeList; coffeList = coffeList.filter { coffe -> coffe.name.contains(text) }})
+                            LazyRow (modifier = Modifier.padding(vertical = 10.dp)) {
+                               items(coffeList) {
+                                   item -> CoffeBox(item)
+                               }
+                            }
                         }
                     }
                 }
@@ -91,11 +125,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SearchInput() {
-    var text by remember { mutableStateOf("") }
+fun SearchInput(value: String, onValueChange: (String) -> Unit) {
     TextField(
-        value = text,
-        onValueChange = {text = it},
+        value = value,
+        onValueChange = onValueChange,
         label = {Text ("Pesquisar um café...", color = Color(0xFF006241)) },
         modifier = Modifier.border(width = 2.dp, shape = RoundedCornerShape(4.dp), color = Color(0xFF006241)).fillMaxWidth(),
         colors = TextFieldDefaults.colors(
@@ -106,16 +139,28 @@ fun SearchInput() {
 }
 
 @Composable
-fun CoffeBox(){
+fun CoffeBox(item: Coffe){
     Column(
-        modifier = Modifier.padding(4.dp).background(Color(0xFF006241)).width(200.dp).height(250.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.clip(shape = RoundedCornerShape(10.dp)).padding(horizontal = 6.dp).width(200.dp).height(400.dp).shadow(1.dp)
     ){
-        Text("Brasil Blend", color = Color.White)
-        Image(
-            painter = rememberAsyncImagePainter(model="https://content-prod-live.cert.starbucks.com/binary/v2/asset/137-95405.jpg"),
-            contentDescription = "Café",
-            modifier = Modifier.height(100.dp).width(100.dp)
-        )
+        Box(
+            modifier = Modifier.padding(10.dp).fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center
+        ){
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(item.image)
+                    .crossfade(true)
+                    .build(),
+                placeholder = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "Café ${item.name}",
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center
+            )
+        }
+        Column(modifier = Modifier.background(Color(0xFFF9F7F5)).fillMaxSize().padding(horizontal = 8.dp) ){
+            Text(item.name, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Text(item.description, fontSize = 10.sp)
+            Text(item.price.toString(), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(vertical = 8.dp))
+        }
     }
 }
