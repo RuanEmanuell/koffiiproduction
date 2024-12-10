@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -101,7 +103,8 @@ class MainActivity : ComponentActivity() {
                         FloatingActionButton(
                             onClick = {},
                             containerColor = Color(0xFF006241),
-                            contentColor = Color.White
+                            contentColor = Color.White,
+                            shape = CircleShape
                         ) { Icon(
                             Icons.Filled.Add,
                             contentDescription = "Adicionar"
@@ -121,6 +124,8 @@ class MainActivity : ComponentActivity() {
 fun HomeScreen(navController: NavHostController){
     var text by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+
+    var orderingItem by remember { mutableStateOf("Mais relevante") }
     var orderingList = listOf(
         "Preço (menor para maior)",
         "Preço (maior para menor)",
@@ -138,6 +143,7 @@ fun HomeScreen(navController: NavHostController){
     var coffe2 = Coffe(2, "Café Teste", "Café equilibrado com leite vaporizado e leve camada de espuma", 3, 2, 4, 2, 8.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
     val originalCoffeList =  remember { mutableStateListOf(coffe1, coffe2) }
     var coffeList by remember { mutableStateOf(originalCoffeList.toList()) }
+
 
     fun orderCoffeList(orderingIndex: Int){
         coffeList = originalCoffeList;
@@ -169,16 +175,18 @@ fun HomeScreen(navController: NavHostController){
                     onDismissRequest = { expanded = false}
                 ) {
                     orderingList.forEach { item ->
-                        DropdownMenuItem(text = {Text(item)}, onClick = {expanded = false; orderCoffeList(orderingList.indexOf(item))})
+                        DropdownMenuItem(text = {Text(item)}, onClick = {expanded = false; orderingItem = item; orderCoffeList(orderingList.indexOf(item))})
                     }
                 }
-
-                IconButton(onClick = {expanded = !expanded},
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = "Filtro"
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically){
+                    Text(orderingItem)
+                    IconButton(onClick = {expanded = !expanded},
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDropDown,
+                            contentDescription = "Filtro"
+                        )
+                    }
                 }
             }
             LazyRow (modifier = Modifier.padding(vertical = 5.dp).fillMaxSize()) {
@@ -209,7 +217,7 @@ fun SearchInput(value: String, onValueChange: (String) -> Unit) {
 @Composable
 fun CoffeBox(item: Coffe){
     Column(
-        modifier = Modifier.clip(shape = RoundedCornerShape(10.dp)).padding(horizontal = 6.dp).width(200.dp).height(400.dp).shadow(1.dp)
+        modifier = Modifier.clip(shape = RoundedCornerShape(10.dp)).padding(horizontal = 6.dp).width(225.dp).height(400.dp).shadow(1.dp)
     ){
         Box(
             modifier = Modifier.padding(10.dp).fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center
@@ -227,7 +235,7 @@ fun CoffeBox(item: Coffe){
         }
         Column(modifier = Modifier.background(Color(0xFFF9F7F5)).fillMaxSize().padding(horizontal = 8.dp) ){
             Text(item.name, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
-            Text(item.description, fontSize = 10.sp)
+            Text(item.description, fontSize = 12.sp)
             Text("R$ ${item.price}", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(vertical = 8.dp))
         }
     }
