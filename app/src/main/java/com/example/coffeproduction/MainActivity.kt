@@ -1,21 +1,20 @@
 package com.example.coffeproduction
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.ScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,12 +30,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,16 +60,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
@@ -84,6 +81,12 @@ import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.coffeproduction.model.Coffe
+import com.google.firebase.Firebase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.database
+import com.google.firebase.database.getValue
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -132,31 +135,6 @@ class MainActivity : ComponentActivity() {
                                     contentDescription = "Adicionar"
                                 )
                             }
-                        } else if (currentRoute == "details/{id}") {
-                            Row (modifier = Modifier.fillMaxWidth().padding(start = 30.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                FloatingActionButton(
-                                    onClick = {},
-                                    containerColor = Color(0xFF006241),
-                                    contentColor = Color.White,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Edit,
-                                        contentDescription = "Editar"
-                                    )
-                                }
-                                FloatingActionButton(
-                                    onClick = {},
-                                    containerColor = Color(0xFF006241),
-                                    contentColor = Color.White,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = "Remover"
-                                    )
-                                }
-                            }
                         }
                     },
                 ) { innerPadding ->
@@ -168,7 +146,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavHostController){
     var text by remember { mutableStateOf("") }
@@ -187,14 +164,56 @@ fun HomeScreen(navController: NavHostController){
         "Mais relevante"
     )
 
+    val database = Firebase.database
+    val myRef = database.getReference("coffees")
 
-    var coffe1 = Coffe(1, "Café Latte", "Café equilibrado com leite vaporizado", 5, 2, 1, 5, 9.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
-    var coffe2 = Coffe(2, "Café Teste", "Café equilibrado com leite vaporizado", 3, 1, 4, 2, 8.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
-    val originalCoffeList =  remember { mutableStateListOf(coffe1, coffe2) }
+    val originalCoffeList = remember { mutableStateListOf<Coffe>() }
     var coffeList by remember { mutableStateOf(originalCoffeList.toList()) }
-    val maxPriceCoffe = originalCoffeList.maxBy { it.price }.id
-    val maxAromaCoffe = originalCoffeList.maxBy { it.aroma }.id
-    val minAcidityCoffe = originalCoffeList.minBy { it.acidity }.id
+
+    val maxPriceCoffe = originalCoffeList.maxByOrNull { it.price }?.id
+    val maxAromaCoffe = originalCoffeList.maxByOrNull { it.aroma }?.id
+    val minAcidityCoffe = originalCoffeList.minByOrNull { it.acidity }?.id
+
+    LaunchedEffect(true) {
+        myRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val coffees = mutableListOf<Coffe>()
+
+                for (childSnapshot in snapshot.children) {
+                    val coffee = childSnapshot.getValue(Coffe::class.java)
+                    coffee?.let { coffees.add(it) }
+                }
+
+                originalCoffeList.clear()
+                originalCoffeList.addAll(coffees)
+
+                if (originalCoffeList.isEmpty()) {
+                    val defaultCoffe = Coffe(
+                        id = 0L,
+                        name = "Café Latte",
+                        description = "Café equilibrado com leite vaporizado",
+                        aroma = 5,
+                        acidity = 2,
+                        bitterness = 1,
+                        flavor = 5,
+                        price = 9.99,
+                        image = "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp"
+                    )
+                    myRef.setValue(listOf(defaultCoffe))
+                    originalCoffeList.add(defaultCoffe)
+
+                    val idRef = database.getReference("idCounter")
+                    idRef.setValue(defaultCoffe.id)
+                }
+
+                coffeList = originalCoffeList.toList()
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                println("Erro ao ler dados: ${error.toException()}")
+            }
+        })
+    }
 
 
     fun orderCoffeList(orderingIndex: Int){
@@ -245,8 +264,10 @@ fun HomeScreen(navController: NavHostController){
             }
             LazyRow (modifier = Modifier.padding(vertical = 5.dp).fillMaxSize()) {
                 items(coffeList) {
-                        item -> Box(modifier = Modifier.clickable {navController.navigate("details/${item.id}")  }){
-                          CoffeBox(item, maxPriceCoffe, maxAromaCoffe, minAcidityCoffe)
+                        item -> Box(modifier = Modifier.clickable {navController.navigate("details/${item.id}"); }){
+                            if (maxPriceCoffe != null && maxAromaCoffe != null && minAcidityCoffe != null) {
+                                CoffeBox(item, maxPriceCoffe, maxAromaCoffe, minAcidityCoffe)
+                            }
                         }
                 }
             }
@@ -271,7 +292,7 @@ fun CustomInput(value: String, onValueChange: (String) -> Unit, label: String) {
 }
 
 @Composable
-fun CoffeBox(item: Coffe, maxPriceCoffe: Number, maxAromaCoffe: Number, minAcidityCoffe: Number){
+fun CoffeBox(item: Coffe, maxPriceCoffe: Long, maxAromaCoffe: Long, minAcidityCoffe: Long){
     Column(
         modifier = Modifier.clip(shape = RoundedCornerShape(10.dp)).padding(horizontal = 6.dp).width(225.dp).height(400.dp).shadow(1.dp)
     ){
@@ -295,15 +316,15 @@ fun CoffeBox(item: Coffe, maxPriceCoffe: Number, maxAromaCoffe: Number, minAcidi
             Text("R$ ${item.price}", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(vertical = 8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center){
                 if(item.id == maxPriceCoffe){
-                    Text("Mais caro", fontSize = 10.sp, textAlign = TextAlign.Center,  modifier = Modifier.background(Color(0xFFD22B2B)).padding(3.dp))
+                    Text("Mais caro", fontSize = 9.sp, textAlign = TextAlign.Center,  modifier = Modifier.background(Color(0xFFD22B2B)).padding(3.dp))
                     Spacer(modifier = Modifier.width(5.dp))
                 }
                 if(item.id == maxAromaCoffe){
-                    Text("Mais aromático", fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF1807E)).padding(3.dp))
+                    Text("Mais aromático", fontSize = 9.sp, textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF1807E)).padding(3.dp))
                     Spacer(modifier = Modifier.width(5.dp))
                 }
                 if(item.id == minAcidityCoffe){
-                    Text("Menos ácido", fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFA8DAF5)).padding(3.dp))
+                    Text("Menos ácido", fontSize = 9.sp, textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFA8DAF5)).padding(3.dp))
                 }
             }
         }
@@ -311,48 +332,83 @@ fun CoffeBox(item: Coffe, maxPriceCoffe: Number, maxAromaCoffe: Number, minAcidi
 }
 
 @Composable
-    fun DetailsScreen(id: Int){
-        var coffe1 = Coffe(1, "Café Latte", "Café equilibrado com leite vaporizado", 5, 2, 1, 5, 9.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
-        var coffe2 = Coffe(2, "Café Teste", "Café equilibrado com leite vaporizado", 3, 1, 4, 2, 8.99, "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp")
-        val originalCoffeList =  remember { mutableStateListOf(coffe1, coffe2) }
+    fun DetailsScreen(id: Long, navController: NavHostController){
+        val database = Firebase.database
+        val myRef = database.getReference("coffees")
+        var coffe: Coffe? by remember { mutableStateOf(null) }
 
-        val coffe = originalCoffeList.find { it.id == id }
+        LaunchedEffect(true) {
+            myRef.child(id.toString()).addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        val currentCoffe = dataSnapshot.getValue(Coffe::class.java)
+                        coffe = currentCoffe
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    println("Erro ao ler dados: ${error.toException()}")
+                }
+            })
+        }
+
+        fun editCoffe(){
+
+        }
+
+        fun deleteCoffe(){
+            myRef.child(id.toString()).removeValue()
+            navController.navigate("home")
+        }
+
         if (coffe != null) {
             Column (modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(coffe.image)
+                        .data(coffe!!.image)
                         .crossfade(true)
                         .build(),
                     placeholder = painterResource(R.drawable.ic_launcher_foreground),
-                    contentDescription = coffe.name,
+                    contentDescription = coffe!!.name,
                     alignment = Alignment.Center,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.background(color = Color(0xFF006241), shape = CircleShape).width(250.dp).height(250.dp)
                 )
-                Text(coffe.name, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 10.dp))
-                Text(coffe.description, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
+                Text(coffe!!.name, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 10.dp))
+                Text(coffe!!.description, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
                 Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center){
                     Text("R$ ", fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 5.dp))
-                    Text(coffe.price.toString().substring(0, coffe.price.toString().indexOf(".")), fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 5.dp))
-                    Text(coffe.price.toString().substring(coffe.price.toString().indexOf("."), coffe.price.toString().length), fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 5.dp))
+                    Text(coffe!!.price.toString().substring(0, coffe!!.price.toString().indexOf(".")), fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 5.dp))
+                    Text(coffe!!.price.toString().substring(coffe!!.price.toString().indexOf("."), coffe!!.price.toString().length), fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 5.dp))
                 }
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp), horizontalArrangement = Arrangement.Center){
-                    Text("Aroma: ${coffe.aroma}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF1807E)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
+                    Text("Aroma: ${coffe!!.aroma}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF1807E)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
                     Spacer(Modifier.width(5.dp))
-                    Text("Acidez: ${coffe.acidity}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFA8DAF5)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
+                    Text("Acidez: ${coffe!!.acidity}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFA8DAF5)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center){
-                    Text("Amargor: ${coffe.bitterness}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFEDED5E)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
+                    Text("Amargor: ${coffe!!.bitterness}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFEDED5E)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
                     Spacer(Modifier.width(5.dp))
-                    Text("Sabor: ${coffe.flavor}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF4CBFF)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
+                    Text("Sabor: ${coffe!!.flavor}/5", textAlign = TextAlign.Center, modifier = Modifier.background(Color(0xFFF4CBFF)).width(95.dp).padding(vertical = 10.dp), fontSize = 13.sp)
+                }
+
+                Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center){
+                    IconButton(onClick = {deleteCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
+                        Icon(Icons.Filled.Edit, "Editar", tint = Color.White)
+                    }
+                    IconButton(onClick = {editCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
+                        Icon(Icons.Filled.Delete, "Deletar", tint = Color.White)
+                    }
+
                 }
             }
+        } else {
+            CircularProgressIndicator()
         }
     }
 
 @Composable
-fun AddScreen(){
+fun AddScreen(navController: NavHostController){
     var itemName by remember { mutableStateOf("") }
     var itemDescription by remember { mutableStateOf("") }
     var itemAroma by remember { mutableStateOf(1) }
@@ -362,12 +418,39 @@ fun AddScreen(){
     var itemPrice by remember { mutableStateOf(0.0) }
     var itemImage by remember { mutableStateOf(0) }
 
+    val database = Firebase.database
+    val idRef = database.getReference("idCounter")
+    var idCounter = 0L;
+
     var imageList = listOf(
         "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp",
         "https://cdn.starbuckschilledcoffee.com/4aeb25/globalassets/evo/our-products/frappuccino/2_frp_creamycoffee.png?width=480&height=600&rmode=max&format=webp",
         "https://cdn.starbuckschilledcoffee.com/4aef4a/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caramelmacchiato_r.png?width=480&height=600&rmode=max&format=webp",
         "https://dutchshopper.com/cdn/shop/files/908858_grande.png?v=1733635647",
         "https://assets.caseys.com/m/6236c752af7a0ad1/400x400-1200002845_base.PNG")
+
+    idRef.addValueEventListener(object : ValueEventListener {
+        override fun onDataChange(dataSnapshot: DataSnapshot) {
+            if (dataSnapshot.exists()) {
+                idCounter = dataSnapshot.getValue(Long::class.java) ?: 0L
+            } else {
+                Log.e("IdCounter", "Nó não encontrado")
+            }
+        }
+
+        override fun onCancelled(error: DatabaseError) {
+            Log.e("IdCounter", "Falha ao ler dados: ${error.toException()}")
+        }
+    })
+
+    fun saveCoffe(){
+        val myRef = database.getReference("coffees")
+        idRef.setValue(idCounter + 1)
+        val newCoffee = Coffe(idCounter + 1, itemName, itemDescription, itemAroma, itemAcidity, itemBitterness, itemFlavor, itemPrice, imageList.get(itemImage))
+        val newCoffeeRef = myRef.child(newCoffee.id.toString())
+        newCoffeeRef.setValue(newCoffee)
+        navController.navigate("home")
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -376,7 +459,7 @@ fun AddScreen(){
         Text("Adicionar / Editar Café", fontWeight = FontWeight.Bold, fontSize = 25.sp, modifier = Modifier.padding(vertical = 30.dp))
         CustomInput(itemName, onValueChange = {itemName = it},  "Digite o nome do café")
         Spacer(modifier = Modifier.height(10.dp))
-        CustomInput(itemDescription, onValueChange = {itemName = it},  "Digite a descrição do café")
+        CustomInput(itemDescription, onValueChange = {itemDescription = it},  "Digite a descrição do café")
         Spacer(modifier = Modifier.height(10.dp))
         CustomInput(itemPrice.toString(), onValueChange = {itemPrice = it.toDouble()},  "Digite o preço (em R$)")
         Spacer(modifier = Modifier.height(10.dp))
@@ -419,7 +502,7 @@ fun AddScreen(){
             }
         }
         Spacer(modifier = Modifier.height(30.dp))
-        Button(onClick = { }, colors = ButtonColors(
+        Button(onClick = {saveCoffe()}, colors = ButtonColors(
             containerColor = Color(0xFF006241),
             contentColor = Color.White,
             disabledContainerColor = Color.Gray,
@@ -449,15 +532,15 @@ fun AppNavHost(navController: NavHostController) {
             composable("home") {
                 HomeScreen(navController)
              }
-            composable("details/{id}", arguments = listOf(navArgument("id") {type = NavType.IntType})) {
+            composable("details/{id}", arguments = listOf(navArgument("id") {type = NavType.LongType})) {
                 backStackEntry ->
-                val id = backStackEntry.arguments?.getInt("id")
+                val id = backStackEntry.arguments?.getLong("id")
                 if (id != null) {
-                    DetailsScreen(id)
+                    DetailsScreen(id, navController)
                 }
             }
             composable("add") {
-                AddScreen()
+                AddScreen(navController)
             }
         }
     }
