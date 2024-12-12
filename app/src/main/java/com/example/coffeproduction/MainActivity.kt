@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
                     floatingActionButton = {
                         if(currentRoute == "home") {
                             FloatingActionButton(
-                                onClick = {navController.navigate("add")},
+                                onClick = {navController.navigate("add/-1")},
                                 containerColor = Color(0xFF006241),
                                 contentColor = Color.White,
                                 shape = CircleShape
@@ -353,7 +353,7 @@ fun CoffeBox(item: Coffe, maxPriceCoffe: Long, maxAromaCoffe: Long, minAcidityCo
         }
 
         fun editCoffe(){
-
+            navController.navigate("add/${id}")
         }
 
         fun deleteCoffe(){
@@ -393,10 +393,10 @@ fun CoffeBox(item: Coffe, maxPriceCoffe: Long, maxAromaCoffe: Long, minAcidityCo
                 }
 
                 Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center){
-                    IconButton(onClick = {deleteCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
+                    IconButton(onClick = {editCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
                         Icon(Icons.Filled.Edit, "Editar", tint = Color.White)
                     }
-                    IconButton(onClick = {editCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
+                    IconButton(onClick = {deleteCoffe()}, modifier = Modifier.padding(10.dp).background(color = Color(0xFF006241), shape = CircleShape)) {
                         Icon(Icons.Filled.Delete, "Deletar", tint = Color.White)
                     }
 
@@ -408,7 +408,7 @@ fun CoffeBox(item: Coffe, maxPriceCoffe: Long, maxAromaCoffe: Long, minAcidityCo
     }
 
 @Composable
-fun AddScreen(navController: NavHostController){
+fun AddScreen(id: Long?, navController: NavHostController,){
     var itemName by remember { mutableStateOf("") }
     var itemDescription by remember { mutableStateOf("") }
     var itemAroma by remember { mutableStateOf(1) }
@@ -418,16 +418,45 @@ fun AddScreen(navController: NavHostController){
     var itemPrice by remember { mutableStateOf(0.0) }
     var itemImage by remember { mutableStateOf(0) }
 
-    val database = Firebase.database
-    val idRef = database.getReference("idCounter")
-    var idCounter = 0L;
-
-    var imageList = listOf(
+    val imageList = listOf(
         "https://cdn.starbuckschilledcoffee.com/4aee53/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caffelatte_r.png?width=480&height=600&rmode=max&format=webp",
         "https://cdn.starbuckschilledcoffee.com/4aeb25/globalassets/evo/our-products/frappuccino/2_frp_creamycoffee.png?width=480&height=600&rmode=max&format=webp",
         "https://cdn.starbuckschilledcoffee.com/4aef4a/globalassets/evo/our-products/chilled-classics/chilled-cup/1_cc_caramelmacchiato_r.png?width=480&height=600&rmode=max&format=webp",
         "https://dutchshopper.com/cdn/shop/files/908858_grande.png?v=1733635647",
         "https://assets.caseys.com/m/6236c752af7a0ad1/400x400-1200002845_base.PNG")
+
+    val database = Firebase.database
+    val idRef = database.getReference("idCounter")
+    var idCounter = 0L;
+
+    val myRef = database.getReference("coffees")
+    if(id != -1L){
+        myRef.child(id.toString()).addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    val editCoffe = dataSnapshot.getValue(Coffe::class.java)
+
+                    if(editCoffe != null){
+                        itemName = editCoffe.name
+                        itemDescription = editCoffe.description
+                        itemAroma = editCoffe.aroma
+                        itemAcidity = editCoffe.acidity
+                        itemBitterness = editCoffe.bitterness
+                        itemFlavor = editCoffe.flavor
+                        itemPrice = editCoffe.price
+                        itemImage = imageList.indexOf(editCoffe.image)
+                    }
+                } else {
+                    Log.e("IdCounter", "Nó não encontrado")
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("IdCounter", "Falha ao ler dados: ${error.toException()}")
+            }
+        })
+    }
+
 
     idRef.addValueEventListener(object : ValueEventListener {
         override fun onDataChange(dataSnapshot: DataSnapshot) {
@@ -444,9 +473,13 @@ fun AddScreen(navController: NavHostController){
     })
 
     fun saveCoffe(){
-        val myRef = database.getReference("coffees")
-        idRef.setValue(idCounter + 1)
-        val newCoffee = Coffe(idCounter + 1, itemName, itemDescription, itemAroma, itemAcidity, itemBitterness, itemFlavor, itemPrice, imageList.get(itemImage))
+        if(id == -1L){
+            idRef.setValue(idCounter + 1)
+        }
+        var newCoffee = Coffe(idCounter + 1, itemName, itemDescription, itemAroma, itemAcidity, itemBitterness, itemFlavor, itemPrice, imageList.get(itemImage))
+        if(id != -1L){
+            newCoffee.id = id!!
+        }
         val newCoffeeRef = myRef.child(newCoffee.id.toString())
         newCoffeeRef.setValue(newCoffee)
         navController.navigate("home")
@@ -456,7 +489,7 @@ fun AddScreen(navController: NavHostController){
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize().padding(5.dp).verticalScroll(rememberScrollState())){
-        Text("Adicionar / Editar Café", fontWeight = FontWeight.Bold, fontSize = 25.sp, modifier = Modifier.padding(vertical = 30.dp))
+        Text( if(id == -1L) "Adicionar Café" else "Editar Café" , fontWeight = FontWeight.Bold, fontSize = 25.sp, modifier = Modifier.padding(vertical = 30.dp))
         CustomInput(itemName, onValueChange = {itemName = it},  "Digite o nome do café")
         Spacer(modifier = Modifier.height(10.dp))
         CustomInput(itemDescription, onValueChange = {itemDescription = it},  "Digite a descrição do café")
@@ -508,7 +541,7 @@ fun AddScreen(navController: NavHostController){
             disabledContainerColor = Color.Gray,
             disabledContentColor = Color.LightGray
         )) {
-            Text("Adicionar Café", fontWeight = FontWeight.Bold);
+            Text( if(id == -1L) "Adicionar Café" else "Editar Café", fontWeight = FontWeight.Bold);
         }
     }
 }
@@ -539,8 +572,10 @@ fun AppNavHost(navController: NavHostController) {
                     DetailsScreen(id, navController)
                 }
             }
-            composable("add") {
-                AddScreen(navController)
+            composable("add/{id}", arguments = listOf(navArgument("id") {type = NavType.LongType})) {
+                    backStackEntry ->
+                val id = backStackEntry.arguments?.getLong("id")
+                AddScreen(id, navController)
             }
         }
     }
