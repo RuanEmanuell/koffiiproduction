@@ -1,6 +1,6 @@
 package com.example.coffeproduction.model
 
-data class Coffe(
+data class Coffee(
     var id: Long = 0L,
     var name: String = "",
     var description: String = "",
