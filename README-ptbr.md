@@ -22,7 +22,7 @@ Você precisa baixar os arquivos desse repositório.
     </td></tr></table>
     
 ### Como executar em modo de desenvolvimento 🏃
-        1 - Configurar o <a href="https://developer.android.com/studio?hl=pt-br"">Android Studio</a> e o emulador/dispositivo.
+        1 - Configurar o Android Studio e o emulador/dispositivo.
         2 - Rodar o projeto.
   
 ### Aqui estão algumas imagens do projeto em execução: ⚡️

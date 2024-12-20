@@ -22,7 +22,7 @@ You need to download the files on this repository.
     </td></tr></table>
     
 ### How to run 🏃
-        1 - Setup <a href="https://developer.android.com/studio?hl=pt-br"">Android Studio</a> and the emulator / device.
+        1 - Setup Android Studio and the emulator / device.
         2 - Run the project.
 		
 ### Here are some images of the project running: ⚡️
