@@ -1,14 +1,14 @@
-# Veja a versão em Português <a href="README-ptbr.md">aqui</a>
+# Check the English version <a href="README.md">here</a>
 
 ## KoffiiProduction
     
-### What is this? 🤔 
-A coffe production app, where you manage a coffee shop, with various options of flavors and options to create, view details, delete and update several informations about the coffees. It was made with Kotlin (Jetpack Compose) and Firebase (Firestore).
+### O que é isso? 🤔
+Um aplicativo de produção de café, onde você gerencia uma cafeteria, com diversas opções de sabores e opções para criar, visualizar detalhes, excluir e atualizar diversas informações sobre os cafés. Foi feito com Kotlin (Jetpack Compose) e Firebase (Firestore).
+
+### Onde posso acessá-lo? 🖥
+Você precisa baixar os arquivos desse repositório.
     
-### Where can I access it? 🖥
-You need to download the files on this repository.
-    
-### Which technologies were used to build it? 🚀 
+### Quais tecnologias foram utilizadas para construí-lo? 🚀
 <table><tr><td style="padding: 5px;">
         <div style="background-color: #333; width: 200px; height: 50px; padding: 10px;">
             <img src='https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kotlin/kotlin-original.svg' width="25" height="25" style="border-radius: 5px;">
@@ -21,10 +21,11 @@ You need to download the files on this repository.
         </div>
     </td></tr></table>
     
-### How to run 🏃
-        1 - Setup <a href="https://developer.android.com/studio?hl=pt-br"">Android Studio</a> and the emulator / device.
-        2 - Run the project.
-		
-### Here are some images of the project running: ⚡️
+### Como executar em modo de desenvolvimento 🏃
+        1 - Configurar o <a href="https://developer.android.com/studio?hl=pt-br"">Android Studio</a> e o emulador/dispositivo.
+        2 - Rodar o projeto.
+  
+### Aqui estão algumas imagens do projeto em execução: ⚡️
 ![Screenshot_8](https://github.com/user-attachments/assets/277f7fe4-f8d1-4403-b3d3-f98b1241d986)
 ![Screenshot_9](https://github.com/user-attachments/assets/7bf48516-9118-46a3-8f8a-08ce89029874)
+
